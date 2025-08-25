@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MaxPurchase - HKSI Vending Machine</title>
+  <style>
+    :root {
+      --bg-color: #1c1c1e;
+      --card-bg: #2c2c2e;
+      --accent: #ff9500;
+      --text-color: #f2f2f7;
+      --muted: #8e8e93;
+      --border-radius: 12px;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .container {
+      max-width: 800px;
+      width: 100%;
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(300px,1fr));
+      gap: 1.5rem;
+    }
+    h1 {
+      grid-column: 1/-1;
+      text-align: center;
+      margin: 0 0 1rem;
+      font-size: clamp(1.5rem,4vw,2.5rem);
+    }
+    label {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    input[type="number"] {
+      width: 100%;
+      padding: 0.6rem;
+      border-radius: var(--border-radius);
+      border: 1px solid #3a3a3c;
+      background: #3a3a3c;
+      color: var(--text-color);
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    input[type="number"]:focus {
+      outline: 2px solid var(--accent);
+    }
+    .btn {
+      grid-column: 1/-1;
+      background: var(--accent);
+      color: var(--card-bg);
+      border: none;
+      border-radius: var(--border-radius);
+      padding: 0.75rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #ffa733;
+    }
+    .alert {
+      grid-column: 1/-1;
+      background: #ff375f;
+      color: #fff;
+      padding: 0.75rem;
+      border-radius: var(--border-radius);
+      font-weight: 600;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      border-bottom: 1px solid #3a3a3c;
+      padding: 0.5rem;
+      text-align: left;
+    }
+    th {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    @media (max-width: 640px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      thead {
+        display: none;
+      }
+      tr {
+        margin-bottom: 1rem;
+        background: #2c2c2e;
+        border-radius: var(--border-radius);
+        padding: 0.5rem;
+      }
+      tr td {
+        border: none;
+        position: relative;
+        padding-left: 50%;
+        white-space: pre-wrap;
+      }
+      tr td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 45%;
+        padding-left: 0.5rem;
+        font-weight: 600;
+        color: var(--accent);
+      }
+    }
+  </style>
+</head>
+<body>
+  <form class="container" id="purchaseForm" onsubmit="event.preventDefault(); maximizePurchases();">
+    <h1>Maximize Drink Purchase</h1>
+    <div>
+      <label for="balance">Card Balance</label>
+      <input type="number" id="balance" min="0" step="0.1" placeholder="e.g. 50" required>
+    </div>
+    <div>
+      <label for="qty7_5">$7.5 quantity</label>
+      <input type="number" id="qty7_5" min="0" step="1" value="0">
+    </div>
+    <div>
+      <label for="qty8_5">$8.5 quantity</label>
+      <input type="number" id="qty8_5" min="0" step="1" value="0">
+    </div>
+    <div>
+      <label for="qty9_5">$9.5 quantity</label>
+      <input type="number" id="qty9_5" min="0" step="1" value="0">
+    </div>
+    <button type="submit" class="btn">Calculate</button>
+    <div id="result"></div>
+  </form>
+
+  <script>
+    function maximizePurchases() {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = '';
+      const balanceInput = document.getElementById('balance');
+      let balance = parseFloat(balanceInput.value);
+      if (isNaN(balance) || balance < 0) {
+        resultDiv.innerHTML = '<div class="alert">Please enter a valid positive balance.</div>';
+        return;
+      }
+      const quantities = [
+        parseInt(document.getElementById('qty7_5').value) || 0,
+        parseInt(document.getElementById('qty8_5').value) || 0,
+        parseInt(document.getElementById('qty9_5').value) || 0
+      ];
+      const prices = [7.5, 8.5, 9.5];
+      let fixedCost = quantities.reduce((sum, qty, idx) => sum + qty * prices[idx], 0);
+      if (fixedCost > balance) {
+        resultDiv.innerHTML = '<div class="alert">Error: The fixed quantity exceeds your balance.</div>';
+        return;
+      }
+      let remainingBalance = balance - fixedCost;
+      let maxItems = 0;
+      let bestCombinations = [];
+      let minRemainingBalance = remainingBalance;
+
+      const limitX = Math.floor(remainingBalance / prices[0]);
+      const limitY = Math.floor(remainingBalance / prices[1]);
+      const limitZ = Math.floor(remainingBalance / prices[2]);
+      for (let x = 0; x <= limitX; x++) {
+        for (let y = 0; y <= limitY; y++) {
+          for (let z = 0; z <= limitZ; z++) {
+            const totalCost = x * prices[0] + y * prices[1] + z * prices[2];
+            if (totalCost > remainingBalance) continue;
+            const totalItems = x + y + z;
+            const remaining = remainingBalance - totalCost;
+            if (totalItems > maxItems || (totalItems === maxItems && remaining < minRemainingBalance)) {
+              maxItems = totalItems;
+              minRemainingBalance = remaining;
+              bestCombinations = [[x, y, z, totalCost]];
+            } else if (totalItems === maxItems && Math.abs(remaining - minRemainingBalance) < 1e-9) {
+              bestCombinations.push([x, y, z, totalCost]);
+            }
+          }
+        }
+      }
+      let html = '';
+      if (quantities.some(q => q > 0)) {
+        html += '<p><strong>Fixed purchase:</strong> $7.5 × ' + quantities[0] + ', $8.5 × ' + quantities[1] + ', $9.5 × ' + quantities[2] + '</p>';
+      }
+      html += '<table><thead><tr><th>$7.5</th><th>$8.5</th><th>$9.5</th><th>Total cost</th></tr></thead><tbody>';
+      bestCombinations.slice(0, 12).forEach(comb => {
+        html += '<tr><td data-label="$7.5">' + comb[0] + '</td><td data-label="$8.5">' + comb[1] + '</td><td data-label="$9.5">' + comb[2] + '</td><td data-label="Total cost">$' + comb[3].toFixed(1) + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      html += '<p><strong>Total additional items purchased:</strong> ' + maxItems + '</p>';
+      html += '<p><strong>Remaining balance:</strong> $' + minRemainingBalance.toFixed(1) + '</p>';
+      resultDiv.innerHTML = html;
+    }
+  </script>
+</body>
+</html>
